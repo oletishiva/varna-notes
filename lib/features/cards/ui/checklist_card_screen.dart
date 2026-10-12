@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/data/notes_repository.dart';
@@ -56,6 +57,7 @@ class _ChecklistEditorState extends ConsumerState<_ChecklistEditor> {
   late final ReminderService _reminders;
   late final CardSaver _saver;
   late final Autosaver _autosaver;
+  late final AutosaveLifecycleFlusher _flusher;
   late final TextEditingController _title;
   final TextEditingController _newItem = TextEditingController();
   final FocusNode _titleFocus = FocusNode();
@@ -76,6 +78,7 @@ class _ChecklistEditorState extends ConsumerState<_ChecklistEditor> {
     _items = List<ChecklistItem>.of(widget.card.items);
     _title = TextEditingController(text: widget.card.title);
     _autosaver = Autosaver(onSave: _saveTitle);
+    _flusher = AutosaveLifecycleFlusher(_autosaver);
   }
 
   Future<void> _saveTitle() async {
@@ -101,8 +104,16 @@ class _ChecklistEditorState extends ConsumerState<_ChecklistEditor> {
 
   @override
   void dispose() {
+    _flusher.detach();
+    // Saves what is still pending (nothing after a delete: it was cancelled).
+    _autosaver.dispose();
     if (!_deleted) {
-      _autosaver.dispose();
+      // Leaving with nothing entered should not leave an empty list behind.
+      unawaited(
+        _saver
+            .deleteIfEmpty(isEmptyChecklistCard)
+            .catchError((Object _) => false),
+      );
     }
     _title.dispose();
     _newItem.dispose();
@@ -248,11 +259,25 @@ class _ChecklistEditorState extends ConsumerState<_ChecklistEditor> {
     if (!ok || !mounted) {
       return;
     }
+    // The screen is replaced as soon as the card is gone, so leave through a
+    // router captured now.
+    final GoRouter router = GoRouter.of(context);
     _deleted = true;
-    final String id = widget.card.id;
-    leaveScreen(context);
-    await _reminders.cancel(id);
-    await _repo.deleteCard(id);
+    _autosaver.cancel();
+    final bool done = await deleteCardFromEditor(
+      repository: _repo,
+      reminders: _reminders,
+      cardId: widget.card.id,
+    );
+    if (!done) {
+      _deleted = false;
+      if (mounted) {
+        _autosaver.markChanged();
+        showInfo(context, 'Could not delete this card. Please try again.');
+      }
+      return;
+    }
+    leaveWithRouter(router);
   }
 
   Future<void> _setReminder() {
@@ -316,6 +341,15 @@ class _ChecklistEditorState extends ConsumerState<_ChecklistEditor> {
                   ),
                 ),
               ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Delete item: ${item.text}',
+            onPressed: () => _delete(item),
+            icon: Icon(
+              Icons.close,
+              size: 20,
+              color: colors.ink.withValues(alpha: 0.55),
             ),
           ),
         ],
@@ -521,6 +555,7 @@ class _ChecklistEditorState extends ConsumerState<_ChecklistEditor> {
       onBack: () => unawaited(_goBack()),
       status: _autosaver.status,
       destinationLabel: provider?.displayName,
+      updatedAt: card.updatedAt,
       favourite: card.favourite,
       onToggleFavourite: () {
         unawaited(_saver.update(

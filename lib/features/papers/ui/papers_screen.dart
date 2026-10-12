@@ -109,11 +109,17 @@ class _PapersScreenState extends ConsumerState<PapersScreen> {
     final bool isPlus = ref.read(isPlusProvider).value ?? false;
     final DateTime now = DateTime.now();
     final DateTime old = item.dueDate;
+    final DateTime firstDate = kRenewalPickerFirstDate;
+    final DateTime lastDate = DateTime(now.year + 30, 12, 31);
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime(old.year + 1, old.month, old.day),
-      firstDate: DateTime(now.year - 1),
-      lastDate: DateTime(now.year + 30, 12, 31),
+      initialDate: clampPickerDate(
+        DateTime(old.year + 1, old.month, old.day),
+        firstDate,
+        lastDate,
+      ),
+      firstDate: firstDate,
+      lastDate: lastDate,
       helpText: 'New renewal date',
     );
     if (picked == null || !mounted) {
@@ -145,7 +151,16 @@ class _PapersScreenState extends ConsumerState<PapersScreen> {
   Future<void> _removeDate(RenewalItem item) async {
     final CardSaver saver =
         CardSaver(ref.read(notesRepositoryProvider), item.card.id);
-    await saver.update((NoteCard c) => c.copyWith(expiryDate: null));
+    final ReminderService reminders = ref.read(reminderServiceProvider);
+    await saver.update(
+      (NoteCard c) => c.copyWith(expiryDate: null, reminderAt: null),
+    );
+    // The reminder belonged to the date that was just removed.
+    try {
+      await reminders.cancel(item.card.id);
+    } catch (_) {
+      // A leftover notification is harmless.
+    }
   }
 
   /// The most urgent item that is overdue or due within 30 days, if any.

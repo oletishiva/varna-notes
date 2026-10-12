@@ -405,9 +405,9 @@ class _VoiceRecorderScreenState extends ConsumerState<VoiceRecorderScreen> {
         return _MessageBody(
           icon: Icons.mic_off_outlined,
           title: 'Microphone access is off',
-          message: 'Varna needs the microphone to record voice notes. Allow '
-              'it for ${AppConfig.appName} in your phone settings, then try '
-              'again.',
+          message: '${AppConfig.appName} needs the microphone to record '
+              "voice notes. Allow microphone access in your phone's Settings, "
+              'then come back and tap Try again.',
           onRetry: () => unawaited(_retry()),
           onBack: () => leaveScreen(context),
         );

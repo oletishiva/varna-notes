@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kIsWeb;
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:http/http.dart' as http;
@@ -64,8 +65,10 @@ class GoogleDriveStore implements CloudStore {
       }
       final GoogleSignInAccount? account = await _signIn.signInSilently();
       return account != null;
-    } catch (_) {
-      return false;
+    } catch (e) {
+      // No network is not "signed out": let the real request report it as
+      // offline instead of asking the user to sign in again.
+      return e is PlatformException && e.code == GoogleSignIn.kNetworkError;
     }
   }
 
@@ -124,6 +127,9 @@ class GoogleDriveStore implements CloudStore {
       );
     }
     if (error is http.ClientException) {
+      return CloudOfflineException();
+    }
+    if (error is PlatformException && error.code == GoogleSignIn.kNetworkError) {
       return CloudOfflineException();
     }
     return CloudException(error.toString());

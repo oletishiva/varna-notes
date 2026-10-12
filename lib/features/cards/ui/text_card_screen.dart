@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/data/attachment_store.dart';
 import '../../../core/data/notes_repository.dart';
@@ -63,6 +64,7 @@ class _TextCardEditorState extends ConsumerState<_TextCardEditor> {
   late final AiService _ai;
   late final CardSaver _saver;
   late final Autosaver _autosaver;
+  late final AutosaveLifecycleFlusher _flusher;
   late final TextEditingController _title;
   late final MarkdownTextEditingController _body;
   final FocusNode _titleFocus = FocusNode();
@@ -83,6 +85,7 @@ class _TextCardEditorState extends ConsumerState<_TextCardEditor> {
     _title = TextEditingController(text: widget.card.title);
     _body = MarkdownTextEditingController(text: widget.card.body);
     _autosaver = Autosaver(onSave: _saveText);
+    _flusher = AutosaveLifecycleFlusher(_autosaver);
   }
 
   /// Reads the fields synchronously (see [Autosaver]) and saves them.
@@ -118,8 +121,14 @@ class _TextCardEditorState extends ConsumerState<_TextCardEditor> {
 
   @override
   void dispose() {
+    _flusher.detach();
+    // Saves what is still pending (nothing after a delete: it was cancelled).
+    _autosaver.dispose();
     if (!_deleted) {
-      _autosaver.dispose();
+      // Leaving with nothing entered should not leave an "Empty note" behind.
+      unawaited(
+        _saver.deleteIfEmpty(isEmptyTextCard).catchError((Object _) => false),
+      );
     }
     _title.dispose();
     _body.dispose();
@@ -141,11 +150,25 @@ class _TextCardEditorState extends ConsumerState<_TextCardEditor> {
     if (!ok || !mounted) {
       return;
     }
+    // The screen is replaced as soon as the card is gone, so leave through a
+    // router captured now.
+    final GoRouter router = GoRouter.of(context);
     _deleted = true;
-    final String id = widget.card.id;
-    leaveScreen(context);
-    await _reminders.cancel(id);
-    await _repo.deleteCard(id);
+    _autosaver.cancel();
+    final bool done = await deleteCardFromEditor(
+      repository: _repo,
+      reminders: _reminders,
+      cardId: widget.card.id,
+    );
+    if (!done) {
+      _deleted = false;
+      if (mounted) {
+        _autosaver.markChanged();
+        showInfo(context, 'Could not delete this card. Please try again.');
+      }
+      return;
+    }
+    leaveWithRouter(router);
   }
 
   void _apply(TextEditingValue Function(TextEditingValue) transform) {
@@ -362,6 +385,7 @@ class _TextCardEditorState extends ConsumerState<_TextCardEditor> {
       onBack: () => unawaited(_goBack()),
       status: _autosaver.status,
       destinationLabel: provider?.displayName,
+      updatedAt: card.updatedAt,
       favourite: card.favourite,
       onToggleFavourite: () {
         unawaited(_saver.update(

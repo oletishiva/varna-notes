@@ -142,7 +142,7 @@ final isOnWifiProvider =
     Provider<Future<bool> Function()>((ref) => defaultIsOnWifi);
 
 /// The sync controller. Creating it also calls `init()` (restores the saved
-/// connection).
+/// connection and runs one silent sync).
 final syncControllerProvider =
     Provider<SyncController>((ref) {
   final SyncController controller = SyncController(
@@ -154,7 +154,7 @@ final syncControllerProvider =
     isOnWifi: ref.watch(isOnWifiProvider),
   );
   ref.onDispose(controller.dispose);
-  unawaited(controller.init().catchError((Object _) {}));
+  unawaited(controller.init(syncAfterRestore: true).catchError((Object _) {}));
   return controller;
 });
 

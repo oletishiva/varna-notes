@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/data/notes_repository.dart';
 import '../../../core/models/models.dart';
 import '../../../core/providers.dart';
+import '../../../core/services/reminder_service.dart';
 import '../../../core/services/usage_limits.dart';
 import '../../../core/theme/varna_colors.dart';
 import '../../../shared/app_state.dart';
@@ -180,19 +182,27 @@ Future<Notebook?> createNotebookFlow(BuildContext context, WidgetRef ref) async 
 }
 
 /// Options for a notebook: rename, colour, lock/unlock, delete.
-/// [onDeleted] runs after the notebook was deleted.
+/// [onDeleted] runs after the notebook was deleted; it must not rely on a
+/// `BuildContext` that may be gone by then (capture a `GoRouter` instead).
+///
+/// The caller's widget can be disposed while the sheets and dialogs are open,
+/// so everything after the first `await` goes through a [ProviderContainer]
+/// captured up front instead of [ref].
 Future<void> showNotebookOptions(
   BuildContext context,
   WidgetRef ref,
   Notebook notebook, {
   VoidCallback? onDeleted,
 }) async {
-  if (notebook.locked && !ref.read(unlockedNotebooksProvider).contains(notebook.id)) {
+  final ProviderContainer container = ProviderScope.containerOf(context);
+  final NotesRepository repo = container.read(notesRepositoryProvider);
+  final ReminderService reminders = container.read(reminderServiceProvider);
+  if (notebook.locked && !container.read(unlockedNotebooksProvider).contains(notebook.id)) {
     final bool ok = await authenticateUser(reason: 'Unlock this notebook');
     if (!ok || !context.mounted) {
       return;
     }
-    ref.read(unlockedNotebooksProvider.notifier).update(
+    container.read(unlockedNotebooksProvider.notifier).update(
           (Set<String> s) => <String>{...s, notebook.id},
         );
   }
@@ -242,7 +252,7 @@ Future<void> showNotebookOptions(
     return;
   }
   Future<void> save(Notebook updated) async {
-    await ref.read(notesRepositoryProvider).updateNotebook(updated);
+    await repo.updateNotebook(updated);
   }
 
   switch (action) {
@@ -273,12 +283,13 @@ Future<void> showNotebookOptions(
     case _NotebookAction.lock:
       await save(notebook.copyWith(locked: !notebook.locked));
       if (!notebook.locked) {
-        ref.read(unlockedNotebooksProvider.notifier).update(
+        container.read(unlockedNotebooksProvider.notifier).update(
               (Set<String> s) => <String>{...s, notebook.id},
             );
       }
     case _NotebookAction.delete:
-      final int count = (await ref.read(notesRepositoryProvider).listCards(notebook.id)).length;
+      final List<NoteCard> cards = await repo.listCards(notebook.id);
+      final int count = cards.length;
       if (!context.mounted) {
         return;
       }
@@ -312,9 +323,17 @@ Future<void> showNotebookOptions(
         },
       );
       if (confirmed == true) {
-        await ref.read(notesRepositoryProvider).deleteNotebook(notebook.id);
-        if (ref.read(lastNotebookIdProvider) == notebook.id) {
-          ref.read(lastNotebookIdProvider.notifier).state = null;
+        await repo.deleteNotebook(notebook.id);
+        // The cards are gone, so their reminders must not fire.
+        for (final NoteCard card in cards) {
+          try {
+            await reminders.cancel(card.id);
+          } catch (_) {
+            // A leftover notification is harmless.
+          }
+        }
+        if (container.read(lastNotebookIdProvider) == notebook.id) {
+          container.read(lastNotebookIdProvider.notifier).state = null;
         }
         onDeleted?.call();
       }

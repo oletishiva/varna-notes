@@ -851,11 +851,17 @@ class _ExpirySheetState extends State<_ExpirySheet> {
 
   Future<void> _change() async {
     final DateTime now = DateTime.now();
+    final DateTime firstDate = kRenewalPickerFirstDate;
+    final DateTime lastDate = DateTime(now.year + 30, 12, 31);
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime(_date.year, _date.month, _date.day),
-      firstDate: DateTime(now.year - 5),
-      lastDate: DateTime(now.year + 30, 12, 31),
+      initialDate: clampPickerDate(
+        DateTime(_date.year, _date.month, _date.day),
+        firstDate,
+        lastDate,
+      ),
+      firstDate: firstDate,
+      lastDate: lastDate,
       helpText: 'Renewal date',
     );
     if (picked == null || !mounted) {

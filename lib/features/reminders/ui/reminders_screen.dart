@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/models/models.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/varna_colors.dart';
+import '../../../shared/app_state.dart';
 import '../../../shared/format.dart';
 import '../../../shared/widgets/centered_column.dart';
 import '../../../shared/widgets/empty_state.dart';
@@ -28,6 +29,7 @@ class RemindersScreen extends ConsumerWidget {
     final DateTime now = ref.watch(clockProvider)();
     final AsyncValue<List<Notebook>> notebooks = ref.watch(notebooksProvider);
     final bool supported = ref.watch(reminderServiceProvider).isSupported;
+    final Set<String> unlocked = ref.watch(unlockedNotebooksProvider);
 
     final List<_Reminder> items = <_Reminder>[];
     bool loading = !notebooks.hasValue;
@@ -97,7 +99,11 @@ class RemindersScreen extends ConsumerWidget {
         children.add(
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: _ReminderRow(item: item),
+            child: _ReminderRow(
+              item: item,
+              hidden: item.notebook.locked &&
+                  !unlocked.contains(item.notebook.id),
+            ),
           ),
         );
       }
@@ -116,11 +122,18 @@ class RemindersScreen extends ConsumerWidget {
 }
 
 class _ReminderRow extends StatelessWidget {
-  const _ReminderRow({required this.item});
+  const _ReminderRow({required this.item, required this.hidden});
 
   final _Reminder item;
 
+  /// The card is in a locked notebook that has not been unlocked: its text
+  /// must not show.
+  final bool hidden;
+
   String _headline() {
+    if (hidden) {
+      return 'Locked note';
+    }
     final NoteCard card = item.card;
     if (card.title.trim().isNotEmpty) {
       return card.title.trim();

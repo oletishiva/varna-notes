@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../app_config.dart';
 import '../../../../core/data/attachment_store.dart';
+import '../../../../core/data/notes_repository.dart';
 import '../../../../core/models/models.dart';
 import '../../../../core/services/reminder_service.dart';
 import '../../../../core/theme/varna_colors.dart';
@@ -185,6 +186,43 @@ Future<bool> confirmDelete(
   );
   return result ?? false;
 }
+
+/// Deletes the card an editor is showing: the card first, then its reminder
+/// (a failure to cancel the reminder is ignored). Resolves to false when the
+/// card could not be deleted.
+Future<bool> deleteCardFromEditor({
+  required NotesRepository repository,
+  required ReminderService reminders,
+  required String cardId,
+}) async {
+  try {
+    await repository.deleteCard(cardId);
+  } catch (_) {
+    return false;
+  }
+  try {
+    await reminders.cancel(cardId);
+  } catch (_) {
+    // A leftover notification for a missing card is harmless.
+  }
+  return true;
+}
+
+/// True for a text card that holds nothing worth keeping.
+bool isEmptyTextCard(NoteCard card) =>
+    card.title.trim().isEmpty &&
+    card.body.trim().isEmpty &&
+    card.attachments.isEmpty &&
+    card.reminderAt == null &&
+    card.expiryDate == null;
+
+/// True for a checklist card that holds nothing worth keeping.
+bool isEmptyChecklistCard(NoteCard card) =>
+    card.title.trim().isEmpty &&
+    card.items.isEmpty &&
+    card.attachments.isEmpty &&
+    card.reminderAt == null &&
+    card.expiryDate == null;
 
 enum _ReminderChoice { change, remove }
 

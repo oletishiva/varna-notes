@@ -85,6 +85,10 @@ class SyncConflicts extends SyncStatus {
   int get hashCode => Object.hash(6, count);
 }
 
+/// Shown (as a [SyncError]) when the cloud account needs to be signed in to
+/// again and nobody could do that interactively.
+const String kSignInAgainMessage = 'Sign in again to keep syncing';
+
 /// A failure for one file; the rest of the sync carries on.
 class SyncFileError {
   const SyncFileError(this.name, this.message);

@@ -305,14 +305,19 @@ class _Opened extends ConsumerWidget {
                   RoundIconButton(
                     icon: Icons.more_horiz_rounded,
                     tooltip: 'Notebook options',
-                    onPressed: () => unawaited(
-                      showNotebookOptions(
-                        context,
-                        ref,
-                        notebook,
-                        onDeleted: () => context.go('/'),
-                      ),
-                    ),
+                    onPressed: () {
+                      // Captured now: the screen may be gone when the
+                      // notebook has been deleted.
+                      final GoRouter router = GoRouter.of(context);
+                      unawaited(
+                        showNotebookOptions(
+                          context,
+                          ref,
+                          notebook,
+                          onDeleted: () => router.go('/'),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),

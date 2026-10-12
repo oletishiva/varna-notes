@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/providers.dart';
 import '../../../../core/theme/varna_colors.dart';
+import '../../../sync/logic/sync_status.dart';
 import 'card_saver.dart';
 import 'ui_kit.dart';
 
@@ -13,6 +16,17 @@ void leaveScreen(BuildContext context) {
     context.pop();
   } else {
     context.go('/');
+  }
+}
+
+/// Leaves through a [router] that was captured *before* an await, so it also
+/// works when the screen itself is already gone (for example after the card
+/// it showed was deleted).
+void leaveWithRouter(GoRouter router) {
+  if (router.canPop()) {
+    router.pop();
+  } else {
+    router.go('/');
   }
 }
 
@@ -35,6 +49,10 @@ class CardMenuAction {
 /// centred in a column of at most [kContentMaxWidth]. On very short viewports
 /// (for example landscape with the keyboard open) the footer scrolls with the
 /// content instead of being pinned, so nothing overflows.
+///
+/// The widget tree above [content] is the same at every height: only the
+/// footer moves. That keeps the text fields (and their focus) alive while the
+/// keyboard opens and closes.
 class TintedCardScaffold extends StatelessWidget {
   const TintedCardScaffold({
     super.key,
@@ -44,6 +62,7 @@ class TintedCardScaffold extends StatelessWidget {
     this.footer,
     this.status,
     this.destinationLabel,
+    this.updatedAt,
     this.favourite = false,
     this.onToggleFavourite,
     this.onDelete,
@@ -63,6 +82,10 @@ class TintedCardScaffold extends StatelessWidget {
   /// Where the card is kept, for the status text ("Google Drive"); null means
   /// only on this phone.
   final String? destinationLabel;
+
+  /// When the card was last changed; used to tell whether the last
+  /// successful sync already includes it.
+  final DateTime? updatedAt;
   final bool favourite;
   final VoidCallback? onToggleFavourite;
   final VoidCallback? onDelete;
@@ -92,6 +115,7 @@ class TintedCardScaffold extends StatelessWidget {
                     child: SaveIndicator(
                       status: status!,
                       destinationLabel: destinationLabel,
+                      cardUpdatedAt: updatedAt,
                     ),
                   ),
           ),
@@ -115,34 +139,9 @@ class TintedCardScaffold extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: kContentMaxWidth),
             child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints box) {
-                final bool compact = box.maxHeight < 440;
-                if (compact) {
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        header,
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: _gutter,
-                          ),
-                          child: content,
-                        ),
-                        if (footer != null)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              _gutter,
-                              16,
-                              _gutter,
-                              0,
-                            ),
-                            child: footer,
-                          ),
-                      ],
-                    ),
-                  );
-                }
+                // Only the footer's place depends on the height.
+                final bool footerInline = box.maxHeight < 440;
+                final Widget? footerWidget = footer;
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
@@ -157,10 +156,20 @@ class TintedCardScaffold extends StatelessWidget {
                           _gutter,
                           16,
                         ),
-                        child: content,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            content,
+                            if (footerInline && footerWidget != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 16),
+                                child: footerWidget,
+                              ),
+                          ],
+                        ),
                       ),
                     ),
-                    if (footer != null)
+                    if (!footerInline && footerWidget != null)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(
                           _gutter,
@@ -168,7 +177,7 @@ class TintedCardScaffold extends StatelessWidget {
                           _gutter,
                           16,
                         ),
-                        child: footer,
+                        child: footerWidget,
                       ),
                   ],
                 );
@@ -182,18 +191,31 @@ class TintedCardScaffold extends StatelessWidget {
 }
 
 /// "Saved" / "Saving..." / "Not saved" next to a small cloud icon.
-class SaveIndicator extends StatelessWidget {
+///
+/// A saved card says "Saved on this device" until the last successful sync
+/// (when a cloud is connected) is newer than the card; only then does it say
+/// "Saved to <cloud>".
+class SaveIndicator extends ConsumerWidget {
   const SaveIndicator({
     super.key,
     required this.status,
     this.destinationLabel,
+    this.cardUpdatedAt,
   });
 
   final ValueListenable<SaveStatus> status;
   final String? destinationLabel;
+  final DateTime? cardUpdatedAt;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final String? destination = destinationLabel;
+    final DateTime? edited = cardUpdatedAt;
+    bool inCloud = false;
+    if (destination != null && edited != null) {
+      final SyncStatus? sync = ref.watch(syncStatusProvider).valueOrNull;
+      inCloud = sync is SyncSynced && !sync.at.isBefore(edited);
+    }
     return ValueListenableBuilder<SaveStatus>(
       valueListenable: status,
       builder: (BuildContext context, SaveStatus value, Widget? _) {
@@ -201,10 +223,8 @@ class SaveIndicator extends StatelessWidget {
         final IconData icon;
         switch (value) {
           case SaveStatus.saved:
-            text = destinationLabel == null
-                ? 'Saved on this phone'
-                : 'Saved to $destinationLabel';
-            icon = Icons.cloud_done_outlined;
+            text = inCloud ? 'Saved to $destination' : 'Saved on this device';
+            icon = inCloud ? Icons.cloud_done_outlined : Icons.check_circle_outline;
           case SaveStatus.saving:
             text = 'Saving...';
             icon = Icons.cloud_upload_outlined;

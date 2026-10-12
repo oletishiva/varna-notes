@@ -21,6 +21,24 @@ class _BrokenListStore extends MemoryCloudStore {
   }
 }
 
+/// Runs [onDownload] once, just before the next download. Used to make a
+/// local edit "while the sync is running".
+class _HookStore extends MemoryCloudStore {
+  _HookStore(TestClock clock) : super(clock: clock.call);
+
+  Future<void> Function()? onDownload;
+
+  @override
+  Future<Uint8List> download(String name) async {
+    final Future<void> Function()? hook = onDownload;
+    onDownload = null;
+    if (hook != null) {
+      await hook();
+    }
+    return super.download(name);
+  }
+}
+
 Map<String, Object?> cloudJson(MemoryCloudStore cloud, String name) {
   final Uint8List bytes = cloud.peek(name)!;
   return asStringMap(jsonDecode(utf8.decode(bytes)));
@@ -620,6 +638,78 @@ void main() {
       final SyncReport r = await a.engine.sync();
       expect(r.mediaUploaded, 0);
       expect(cloud.contains('att_photo-1.bin'), isFalse);
+    });
+  });
+
+  group('races and reconnecting', () {
+    test('a local edit made while the cloud copy downloads is kept', () async {
+      final _HookStore hook = _HookStore(clock);
+      final Device p = await Device.create(hook, clock);
+      final Device q = await Device.create(hook, clock);
+      addTearDown(p.close);
+      addTearDown(q.close);
+
+      final Notebook nb = await p.repo.createNotebook(title: 'Home');
+      final NoteCard card = await p.repo.createCard(
+        notebookId: nb.id,
+        type: CardType.text,
+        title: 'Milk',
+      );
+      clock.advance();
+      await p.engine.sync();
+      clock.advance();
+      await q.engine.sync();
+      clock.advance();
+
+      // Only the cloud copy changes (through the other device) ...
+      final NoteCard onQ = (await q.repo.getCard(card.id))!;
+      await q.repo.updateCard(onQ.copyWith(title: 'From Q'));
+      await q.engine.sync();
+      clock.advance();
+
+      // ... but the user types on p while p is downloading it.
+      hook.onDownload = () async {
+        final NoteCard current = (await p.repo.getCard(card.id))!;
+        await p.repo.updateCard(current.copyWith(title: 'Typed meanwhile'));
+      };
+      final SyncReport r = await p.engine.sync();
+
+      expect(r.downloaded, 0);
+      expect(r.conflicts, 1);
+      expect((await p.repo.getCard(card.id))?.title, 'Typed meanwhile');
+      final List<SyncConflict> conflicts = await p.repo.listConflicts();
+      expect(conflicts.single.localTitle, 'Typed meanwhile');
+      expect(conflicts.single.remoteTitle, 'From Q');
+    });
+
+    test('no sync state and identical content is simply in sync', () async {
+      final (_, NoteCard card) = await seedBoth();
+      // What Disconnect followed by connecting again leaves behind.
+      await b.repo.clearSyncStates();
+      await b.repo.clearConflicts();
+      expect(await b.repo.countUnsynced(), 2);
+      cloud.uploadLog.clear();
+
+      final SyncReport r = await b.engine.sync();
+      expect(r.conflicts, 0);
+      expect(r.uploaded, 0);
+      expect(r.downloaded, 0);
+      expect(cloud.uploadLog, isEmpty);
+      expect(await b.repo.listConflicts(), isEmpty);
+      expect(await b.repo.countUnsynced(), 0);
+      expect((await b.repo.getCard(card.id))?.title, 'Milk');
+    });
+
+    test('no sync state and different content is still a conflict', () async {
+      final (_, NoteCard card) = await seedBoth();
+      final NoteCard onB = (await b.repo.getCard(card.id))!;
+      await b.repo.updateCard(onB.copyWith(title: 'Changed on B'));
+      await b.repo.clearSyncStates();
+      await b.repo.clearConflicts();
+
+      final SyncReport r = await b.engine.sync();
+      expect(r.conflicts, 1);
+      expect((await b.repo.getCard(card.id))?.title, 'Changed on B');
     });
   });
 

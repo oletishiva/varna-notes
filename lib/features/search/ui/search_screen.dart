@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/models/models.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/varna_colors.dart';
+import '../../../shared/app_state.dart';
 import '../../cards/ui/widgets/attachment_image.dart';
 import '../../cards/ui/widgets/format_utils.dart';
 import '../../cards/ui/widgets/tinted_card_scaffold.dart';
@@ -61,6 +62,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     setState(() => _query = value.trim());
   }
 
+  /// Opens a card and, when the user comes back, runs the search again: the
+  /// card may have been edited or deleted meanwhile.
+  Future<void> _openCard(String cardId) async {
+    await context.push<void>('/card/$cardId');
+    if (!mounted) {
+      return;
+    }
+    ref.invalidate(searchProvider);
+  }
+
   void _clear() {
     _debounce?.cancel();
     _controller.clear();
@@ -74,11 +85,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final AsyncValue<List<SearchHit>>? results = hasQuery
         ? ref.watch(searchProvider(SearchQuery(_query, type: _filter.type)))
         : null;
+    final AsyncValue<List<Notebook>> notebooksAsync =
+        ref.watch(notebooksProvider);
     final Map<String, String> notebookNames = <String, String>{
-      for (final Notebook n
-          in ref.watch(notebooksProvider).value ?? const <Notebook>[])
+      for (final Notebook n in notebooksAsync.value ?? const <Notebook>[])
         n.id: n.title,
     };
+    // Cards of locked notebooks stay hidden until the notebook is unlocked.
+    final Set<String> unlocked = ref.watch(unlockedNotebooksProvider);
+    final Set<String> hiddenNotebooks = <String>{
+      for (final Notebook n in notebooksAsync.value ?? const <Notebook>[])
+        if (n.locked && !unlocked.contains(n.id)) n.id,
+    };
+    final bool keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     final List<String> terms = _query
         .split(RegExp(r'\s+'))
         .where((String t) => t.isNotEmpty)
@@ -118,7 +137,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             hit: hit,
             terms: terms,
             notebookName: notebookNames[hit.card.notebookId] ?? '',
-            onTap: () => unawaited(context.push('/card/${hit.card.id}')),
+            locked: hiddenNotebooks.contains(hit.card.notebookId),
+            onTap: () => unawaited(_openCard(hit.card.id)),
           );
         },
       );
@@ -132,7 +152,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 'scanned text and voice transcripts.',
           )
         : results.when(
-            data: listFor,
+            // Wait for the notebooks too: they say which cards are locked.
+            data: (List<SearchHit> hits) => notebooksAsync.hasValue
+                ? listFor(hits)
+                : const Center(child: CircularProgressIndicator()),
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (Object e, StackTrace s) => const _Hint(
               icon: Icons.error_outline,
@@ -223,17 +246,20 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     ],
                   ),
                   Expanded(child: body),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Search runs on this phone, so it works offline.',
-                    textAlign: TextAlign.center,
-                    style: bodyStyle(
-                      context,
-                      13,
-                      color: colors.muted,
-                      height: 1.4,
+                  // Hidden while the keyboard is open: there is no room.
+                  if (!keyboardOpen) ...<Widget>[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Search runs on this phone, so it works offline.',
+                      textAlign: TextAlign.center,
+                      style: bodyStyle(
+                        context,
+                        13,
+                        color: colors.muted,
+                        height: 1.4,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -351,12 +377,17 @@ class _ResultTile extends StatelessWidget {
     required this.hit,
     required this.terms,
     required this.notebookName,
+    required this.locked,
     required this.onTap,
   });
 
   final SearchHit hit;
   final List<String> terms;
   final String notebookName;
+
+  /// The card is in a locked notebook that has not been unlocked: show no
+  /// title, snippet, picture or matched field.
+  final bool locked;
   final VoidCallback onTap;
 
   @override
@@ -365,7 +396,7 @@ class _ResultTile extends StatelessWidget {
     final NoteCard card = hit.card;
     final Color highlight = colors.cardColor(0);
     Attachment? image;
-    for (final Attachment a in card.attachments) {
+    for (final Attachment a in locked ? const <Attachment>[] : card.attachments) {
       if (a.kind == AttachmentKind.image) {
         image = a;
         break;
@@ -374,6 +405,9 @@ class _ResultTile extends StatelessWidget {
     final String where = notebookName.isEmpty
         ? cardTypeLabel(card.type)
         : '${cardTypeLabel(card.type)} in $notebookName';
+    final bool showSnippet = !locked &&
+        hit.matchedIn != SearchField.title &&
+        hit.snippet.isNotEmpty;
 
     return Semantics(
       button: true,
@@ -406,16 +440,17 @@ class _ResultTile extends StatelessWidget {
                     children: <Widget>[
                       Text.rich(
                         TextSpan(
-                          children: highlightSpans(
-                            displayTitle(card),
-                            terms,
-                            highlight,
-                          ),
+                          children: locked
+                              ? <InlineSpan>[const TextSpan(text: 'Locked note')]
+                              : highlightSpans(
+                                  displayTitle(card),
+                                  terms,
+                                  highlight,
+                                ),
                         ),
                         style: bodyStyle(context, 16, weight: FontWeight.w700),
                       ),
-                      if (hit.matchedIn != SearchField.title &&
-                          hit.snippet.isNotEmpty) ...<Widget>[
+                      if (showSnippet) ...<Widget>[
                         const SizedBox(height: 3),
                         Text.rich(
                           TextSpan(
@@ -435,7 +470,11 @@ class _ResultTile extends StatelessWidget {
                       ],
                       const SizedBox(height: 6),
                       Text(
-                        'Matched in ${_fieldLabel(hit.matchedIn)}, $where',
+                        locked
+                            ? (notebookName.isEmpty
+                                ? 'In a locked notebook'
+                                : 'In the locked notebook $notebookName')
+                            : 'Matched in ${_fieldLabel(hit.matchedIn)}, $where',
                         style: bodyStyle(
                           context,
                           12,

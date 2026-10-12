@@ -367,16 +367,29 @@ class SyncEngine {
       await _markSynced(local, remote);
       return;
     }
+    // `local` is the snapshot taken at the start of the run. When only the
+    // cloud changed, re-read the record right before overwriting it: an edit
+    // made while this run was downloading must not be lost.
+    SyncRecord current = local;
     if (!localChanged) {
-      await repository.applyRemoteRecord(received);
-      await _markSynced(received, remote);
-      counters.downloaded++;
-      return;
+      final SyncRecord? fresh =
+          await repository.getSyncRecord(local.kind, local.id);
+      if (fresh == null || fresh.updatedAt == local.updatedAt) {
+        await repository.applyRemoteRecord(received);
+        await _markSynced(received, remote);
+        counters.downloaded++;
+        return;
+      }
+      current = fresh;
+      if (current.contentEquals(received)) {
+        await _markSynced(current, remote);
+        return;
+      }
     }
     await repository.putConflict(SyncConflict(
-      kind: local.kind,
-      id: local.id,
-      local: local.json,
+      kind: current.kind,
+      id: current.id,
+      local: current.json,
       remote: received.json,
       detectedAt: _clock().toUtc(),
       remoteModified: remote.modified.toUtc(),

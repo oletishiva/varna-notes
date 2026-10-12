@@ -31,12 +31,13 @@ class NotebooksScreen extends ConsumerWidget {
 
   Future<void> _open(BuildContext context, WidgetRef ref, Notebook nb) async {
     final GoRouter router = GoRouter.of(context);
-    if (nb.locked && !ref.read(unlockedNotebooksProvider).contains(nb.id)) {
+    final ProviderContainer container = ProviderScope.containerOf(context);
+    if (nb.locked && !container.read(unlockedNotebooksProvider).contains(nb.id)) {
       final bool ok = await authenticateUser(reason: 'Unlock ${nb.title}');
       if (!ok) {
         return;
       }
-      ref.read(unlockedNotebooksProvider.notifier).update(
+      container.read(unlockedNotebooksProvider.notifier).update(
             (Set<String> s) => <String>{...s, nb.id},
           );
     }
@@ -124,18 +125,21 @@ class NotebooksScreen extends ConsumerWidget {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 130),
             children: <Widget>[
-              Row(
+              // A Wrap, so at a narrow width and a large text size the chip
+              // moves below the title instead of squeezing it mid-word.
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 6,
                 children: <Widget>[
-                  Expanded(
-                    child: Semantics(
-                      header: true,
-                      child: Text(
-                        'Notebooks',
-                        style: displayStyle(context, 34, letterSpacing: -0.8),
-                      ),
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      'Notebooks',
+                      style: displayStyle(context, 34, letterSpacing: -0.8),
                     ),
                   ),
-                  const SizedBox(width: 8),
                   const _SyncChip(),
                 ],
               ),

@@ -67,13 +67,13 @@ class _PhotoEditorState extends ConsumerState<_PhotoEditor> {
   late final OcrService _ocr;
   late final CardSaver _saver;
   late final Autosaver _autosaver;
+  late final AutosaveLifecycleFlusher _flusher;
   late final TextEditingController _title;
   final FocusNode _titleFocus = FocusNode();
   final PageController _pages = PageController();
 
   int _page = 0;
   bool _zoomed = false;
-  bool _deleted = false;
   bool _ocrBusy = false;
 
   @override
@@ -86,6 +86,7 @@ class _PhotoEditorState extends ConsumerState<_PhotoEditor> {
     _saver = CardSaver(_repo, widget.card.id);
     _title = TextEditingController(text: widget.card.title);
     _autosaver = Autosaver(onSave: _saveTitle);
+    _flusher = AutosaveLifecycleFlusher(_autosaver);
   }
 
   Future<void> _saveTitle() async {
@@ -108,9 +109,9 @@ class _PhotoEditorState extends ConsumerState<_PhotoEditor> {
 
   @override
   void dispose() {
-    if (!_deleted) {
-      _autosaver.dispose();
-    }
+    _flusher.detach();
+    // Saves what is still pending (nothing after a delete: it was cancelled).
+    _autosaver.dispose();
     _title.dispose();
     _titleFocus.dispose();
     _pages.dispose();
@@ -134,11 +135,23 @@ class _PhotoEditorState extends ConsumerState<_PhotoEditor> {
     if (!ok || !mounted) {
       return;
     }
-    _deleted = true;
-    final String id = widget.card.id;
-    leaveScreen(context);
-    await _reminders.cancel(id);
-    await _repo.deleteCard(id);
+    // The screen is replaced as soon as the card is gone, so leave through a
+    // router captured now.
+    final GoRouter router = GoRouter.of(context);
+    _autosaver.cancel();
+    final bool done = await deleteCardFromEditor(
+      repository: _repo,
+      reminders: _reminders,
+      cardId: widget.card.id,
+    );
+    if (!done) {
+      if (mounted) {
+        _autosaver.markChanged();
+        showInfo(context, 'Could not delete this card. Please try again.');
+      }
+      return;
+    }
+    leaveWithRouter(router);
   }
 
   Future<void> _shareCurrentImage() async {
@@ -207,11 +220,13 @@ class _PhotoEditorState extends ConsumerState<_PhotoEditor> {
       final DateTime initial = current != null
           ? DateTime(current.year, current.month, current.day)
           : DateTime(now.year, now.month, now.day + 30);
+      final DateTime firstDate = kRenewalPickerFirstDate;
+      final DateTime lastDate = DateTime(now.year + 30, 12, 31);
       picked = await showDatePicker(
         context: context,
-        initialDate: initial,
-        firstDate: DateTime(now.year - 5),
-        lastDate: DateTime(now.year + 30, 12, 31),
+        initialDate: clampPickerDate(initial, firstDate, lastDate),
+        firstDate: firstDate,
+        lastDate: lastDate,
         helpText: 'Renewal date',
       );
     }
@@ -241,8 +256,14 @@ class _PhotoEditorState extends ConsumerState<_PhotoEditor> {
 
   Future<void> _removeRenewalDate() async {
     await _saver.update(
-      (NoteCard c) => c.copyWith(expiryDate: null),
+      (NoteCard c) => c.copyWith(expiryDate: null, reminderAt: null),
     );
+    // The reminder belonged to the date that was just removed.
+    try {
+      await _reminders.cancel(widget.card.id);
+    } catch (_) {
+      // A leftover notification is harmless.
+    }
   }
 
   Future<void> _remindBeforeRenewal() async {
@@ -395,6 +416,7 @@ class _PhotoEditorState extends ConsumerState<_PhotoEditor> {
       onBack: () => unawaited(_goBack()),
       status: _autosaver.status,
       destinationLabel: provider?.displayName,
+      updatedAt: card.updatedAt,
       favourite: card.favourite,
       onToggleFavourite: () {
         unawaited(_saver.update(

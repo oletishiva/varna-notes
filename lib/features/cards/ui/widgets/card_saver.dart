@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 import '../../../../core/data/notes_repository.dart';
 import '../../../../core/models/models.dart';
@@ -32,6 +32,22 @@ class CardSaver {
       return _repository.updateCard(changed);
     });
     _chain = result.then<void>((NoteCard? _) {}, onError: (Object _) {});
+    return result;
+  }
+
+  /// Soft-deletes the card when [isEmpty] says the stored version holds
+  /// nothing worth keeping. Runs after every earlier [update], so a pending
+  /// save is applied first. Resolves to true when the card was deleted.
+  Future<bool> deleteIfEmpty(bool Function(NoteCard card) isEmpty) {
+    final Future<bool> result = _chain.then<bool>((_) async {
+      final NoteCard? current = await _repository.getCard(cardId);
+      if (current == null || !isEmpty(current)) {
+        return false;
+      }
+      await _repository.deleteCard(cardId);
+      return true;
+    });
+    _chain = result.then<void>((bool _) {}, onError: (Object _) {});
     return result;
   }
 }
@@ -106,6 +122,17 @@ class Autosaver {
     }
   }
 
+  /// Drops the pending edits without saving them (the card is being deleted).
+  /// Saves that already started are not affected.
+  void cancel() {
+    _timer?.cancel();
+    _timer = null;
+    _dirty = false;
+    if (!_disposed) {
+      status.value = SaveStatus.saved;
+    }
+  }
+
   /// Saves pending edits (without waiting) and releases resources.
   void dispose() {
     if (_disposed) {
@@ -122,5 +149,28 @@ class Autosaver {
       );
     }
     status.dispose();
+  }
+}
+
+/// Flushes an [Autosaver] when the app is backgrounded (paused or inactive),
+/// so edits typed just before switching apps are never lost. Create it in
+/// `initState` and call [detach] in `dispose`.
+class AutosaveLifecycleFlusher with WidgetsBindingObserver {
+  AutosaveLifecycleFlusher(this._autosaver) {
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  final Autosaver _autosaver;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      unawaited(_autosaver.flush());
+    }
+  }
+
+  void detach() {
+    WidgetsBinding.instance.removeObserver(this);
   }
 }

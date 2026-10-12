@@ -68,6 +68,7 @@ class _VoiceEditorState extends ConsumerState<_VoiceEditor> {
   late final UsageLimits _limits;
   late final CardSaver _saver;
   late final Autosaver _autosaver;
+  late final AutosaveLifecycleFlusher _flusher;
   late final TextEditingController _title;
   final FocusNode _titleFocus = FocusNode();
 
@@ -81,7 +82,6 @@ class _VoiceEditorState extends ConsumerState<_VoiceEditor> {
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
   double? _dragMs;
-  bool _deleted = false;
   bool _transcribing = false;
   String _language = 'en';
 
@@ -105,6 +105,7 @@ class _VoiceEditorState extends ConsumerState<_VoiceEditor> {
     _saver = CardSaver(_repo, widget.card.id);
     _title = TextEditingController(text: widget.card.title);
     _autosaver = Autosaver(onSave: _saveTitle);
+    _flusher = AutosaveLifecycleFlusher(_autosaver);
     final int? ms = _audio?.durationMs;
     if (ms != null) {
       _duration = Duration(milliseconds: ms);
@@ -190,9 +191,9 @@ class _VoiceEditorState extends ConsumerState<_VoiceEditor> {
 
   @override
   void dispose() {
-    if (!_deleted) {
-      _autosaver.dispose();
-    }
+    _flusher.detach();
+    // Saves what is still pending (nothing after a delete: it was cancelled).
+    _autosaver.dispose();
     for (final StreamSubscription<dynamic> sub in _subs) {
       unawaited(sub.cancel());
     }
@@ -218,11 +219,23 @@ class _VoiceEditorState extends ConsumerState<_VoiceEditor> {
     if (!ok || !mounted) {
       return;
     }
-    _deleted = true;
-    final String id = widget.card.id;
-    leaveScreen(context);
-    await _reminders.cancel(id);
-    await _repo.deleteCard(id);
+    // The screen is replaced as soon as the card is gone, so leave through a
+    // router captured now.
+    final GoRouter router = GoRouter.of(context);
+    _autosaver.cancel();
+    final bool done = await deleteCardFromEditor(
+      repository: _repo,
+      reminders: _reminders,
+      cardId: widget.card.id,
+    );
+    if (!done) {
+      if (mounted) {
+        _autosaver.markChanged();
+        showInfo(context, 'Could not delete this card. Please try again.');
+      }
+      return;
+    }
+    leaveWithRouter(router);
   }
 
   Future<void> _togglePlay() async {
@@ -488,6 +501,7 @@ class _VoiceEditorState extends ConsumerState<_VoiceEditor> {
       onBack: () => unawaited(_goBack()),
       status: _autosaver.status,
       destinationLabel: provider?.displayName,
+      updatedAt: card.updatedAt,
       favourite: card.favourite,
       onToggleFavourite: () {
         unawaited(_saver.update(

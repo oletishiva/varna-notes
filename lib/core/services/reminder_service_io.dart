@@ -15,6 +15,12 @@ ReminderService createReminderService() {
   return const NoopReminderService();
 }
 
+/// Called when the user taps a reminder notification. Opening the card needs
+/// the app's router, which this service has no access to, so this does
+/// nothing on purpose: the tap simply brings the app forward (the system does
+/// that) and the user finds the card in Reminders.
+void _onReminderTapped(NotificationResponse response) {}
+
 /// flutter_local_notifications based reminders.
 ///
 /// Notifications are scheduled for an absolute instant (converted to UTC),
@@ -43,6 +49,7 @@ class LocalNotificationsReminderService implements ReminderService {
           requestSoundPermission: false,
         ),
       ),
+      onDidReceiveNotificationResponse: _onReminderTapped,
     );
     _initialised = true;
   }

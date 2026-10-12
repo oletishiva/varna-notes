@@ -155,8 +155,9 @@ String? get accountLabel
 bool isProviderSupported(SyncProviderId provider)   // iCloud only on iOS/macOS
 Future<int> pendingChanges()
 
-Future<void> init()                            // restores saved connection; the provider calls it
-Future<SyncReport> syncNow()                   // never throws; honours Wi-Fi only via isOnWifi
+Future<void> init({bool syncAfterRestore = false})   // restores saved connection; the provider calls it with true (one silent sync)
+Future<SyncReport> syncNow({bool manual = true})     // never throws; honours Wi-Fi only via isOnWifi
+Future<SyncReport?> onAppResumed()             // silent sync, at most once per resumeThrottle (60 s); null when skipped
 Future<SyncReport> connect(SyncProviderId provider)   // never throws
 Future<void> disconnect()                      // keeps local notes
 
@@ -169,6 +170,10 @@ Future<void> dispose()
 Auto sync runs `autoSyncDelay` after the last local edit when a cloud is connected.
 `syncNow` with Wi-Fi only on and the probe returning false sets `SyncOffline()` and
 returns `SyncReport(offline: true)`.
+When the store is not available (signed out), a manual `syncNow` tries `signIn()` once;
+if that fails it sets `SyncError(kSignInAgainMessage)` and returns an aborted report.
+`syncNow(manual: false)` (timer, launch, resume) never prompts and only sets that error.
+Edits made while a sync runs cause exactly one follow-up sync afterwards.
 
 ### Sync types (`lib/features/sync/logic`)
 ```

@@ -41,6 +41,22 @@ DateTime? renewalReminderTime(DateTime expiry, DateTime now) {
   return when.isAfter(now) ? when : null;
 }
 
+/// The earliest date the renewal date pickers offer. Parsed or old dates can
+/// lie far in the past.
+final DateTime kRenewalPickerFirstDate = DateTime(2000);
+
+/// Moves [date] into [first]..[last]. `showDatePicker` asserts when its
+/// `initialDate` lies outside that range, so always pass it through here.
+DateTime clampPickerDate(DateTime date, DateTime first, DateTime last) {
+  if (date.isBefore(first)) {
+    return first;
+  }
+  if (date.isAfter(last)) {
+    return last;
+  }
+  return date;
+}
+
 /// Picks one of `AppConfig.paperFolders` from text read off a paper.
 String guessPaperFolder(String text) {
   final String t = text.toLowerCase();

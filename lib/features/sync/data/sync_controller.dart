@@ -47,6 +47,7 @@ class SyncController {
     Clock? clock,
     this.autoSyncDelay = const Duration(seconds: 5),
     this.isOnWifi,
+    this.resumeThrottle = const Duration(seconds: 60),
   })  : _factory = storeFactory ?? defaultCloudStoreFactory,
         _clock = clock ?? systemClock;
 
@@ -64,6 +65,9 @@ class SyncController {
   /// `syncControllerProvider`). Without it the setting cannot be enforced.
   final Future<bool> Function()? isOnWifi;
 
+  /// Minimum time between silent syncs started at launch / app resume.
+  final Duration resumeThrottle;
+
   SyncEngine? _engine;
   SyncProviderId? _provider;
   SyncStatus _status = const SyncIdle();
@@ -71,6 +75,9 @@ class SyncController {
   StreamSubscription<void>? _changesSub;
   Timer? _debounce;
   bool _disposed = false;
+  int _activeSyncs = 0;
+  bool _followUpPending = false;
+  DateTime? _lastSilentAttempt;
   final StreamController<SyncStatus> _statusController =
       StreamController<SyncStatus>.broadcast();
 
@@ -119,7 +126,10 @@ class SyncController {
 
   /// Restores the connection saved in settings and starts watching for local
   /// edits. Call once at app start (the provider does this for you).
-  Future<void> init() async {
+  ///
+  /// With [syncAfterRestore] a restored connection also gets one silent sync
+  /// (not awaited; it never prompts for a sign-in).
+  Future<void> init({bool syncAfterRestore = false}) async {
     final AppSettings saved = await settings.load();
     final SyncProviderId? provider = saved.syncProvider;
     if (provider != null && _engine == null) {
@@ -131,6 +141,25 @@ class SyncController {
     if (conflicts > 0 && _engine != null) {
       _setStatus(SyncConflicts(conflicts));
     }
+    if (syncAfterRestore && _engine != null && !_disposed) {
+      _lastSilentAttempt = _clock();
+      unawaited(syncNow(manual: false));
+    }
+  }
+
+  /// Call when the app comes back to the foreground: runs a silent sync,
+  /// at most once per [resumeThrottle]. Returns null when it did nothing.
+  Future<SyncReport?> onAppResumed() async {
+    if (_disposed || _engine == null) {
+      return null;
+    }
+    final DateTime now = _clock();
+    final DateTime? last = _lastSilentAttempt;
+    if (last != null && now.difference(last) < resumeThrottle) {
+      return null;
+    }
+    _lastSilentAttempt = now;
+    return syncNow(manual: false);
   }
 
   SyncEngine _newEngine(CloudStore store, bool includeMedia) {
@@ -158,6 +187,19 @@ class SyncController {
   }
 
   void _onLocalChange(void _) {
+    if (autoSyncDelay == null || _engine == null || _disposed) {
+      return;
+    }
+    if (_activeSyncs > 0) {
+      // The running sync may already have read the records: one follow-up
+      // sync runs when it is done.
+      _followUpPending = true;
+      return;
+    }
+    _scheduleAutoSync();
+  }
+
+  void _scheduleAutoSync() {
     final Duration? delay = autoSyncDelay;
     if (delay == null || _engine == null || _disposed) {
       return;
@@ -173,7 +215,7 @@ class SyncController {
       return;
     }
     try {
-      await syncNow();
+      await syncNow(manual: false);
     } catch (_) {
       // syncNow reports problems through the status stream.
     }
@@ -183,7 +225,24 @@ class SyncController {
 
   /// Runs a sync now. Never throws; inspect the report (or [watchStatus]).
   /// Returns an aborted report when no cloud is connected.
-  Future<SyncReport> syncNow() async {
+  ///
+  /// When the cloud account is signed out, a [manual] sync tries an
+  /// interactive sign-in once; automatic syncs (`manual: false`) never prompt
+  /// and only set `SyncError(kSignInAgainMessage)`.
+  Future<SyncReport> syncNow({bool manual = true}) async {
+    _activeSyncs++;
+    try {
+      return await _syncNow(manual);
+    } finally {
+      _activeSyncs--;
+      if (_activeSyncs == 0 && _followUpPending) {
+        _followUpPending = false;
+        _scheduleAutoSync();
+      }
+    }
+  }
+
+  Future<SyncReport> _syncNow(bool manual) async {
     final SyncEngine? engine = _engine;
     if (engine == null) {
       return const SyncReport(
@@ -200,11 +259,49 @@ class SyncController {
       _setStatus(const SyncOffline());
       return const SyncReport(offline: true);
     }
+    final SyncReport? blocked = await _ensureSignedIn(engine.store, manual);
+    if (blocked != null) {
+      return blocked;
+    }
     final SyncReport report = await engine.sync();
     if (!report.offline && !report.aborted) {
       await settings.setLastSyncAt(_clock().toUtc());
     }
     return report;
+  }
+
+  /// Null when the store is usable. Otherwise the report to return: a manual
+  /// sync first tries an interactive sign-in once.
+  Future<SyncReport?> _ensureSignedIn(CloudStore store, bool manual) async {
+    bool ready = false;
+    try {
+      ready = await store.isAvailable();
+    } catch (_) {
+      ready = false;
+    }
+    if (ready) {
+      return null;
+    }
+    if (manual) {
+      try {
+        ready = await store.signIn();
+      } on CloudOfflineException {
+        _setStatus(const SyncOffline());
+        return const SyncReport(offline: true);
+      } catch (_) {
+        ready = false;
+      }
+      if (ready) {
+        return null;
+      }
+    }
+    _setStatus(const SyncError(kSignInAgainMessage));
+    return const SyncReport(
+      aborted: true,
+      errors: <SyncFileError>[
+        SyncFileError('provider', kSignInAgainMessage),
+      ],
+    );
   }
 
   /// Signs in to [provider] (if needed), pushes all local data to it and makes

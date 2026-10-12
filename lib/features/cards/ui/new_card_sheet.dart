@@ -8,6 +8,8 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/data/attachment_store.dart';
+import '../../../core/data/notes_repository.dart';
 import '../../../core/models/models.dart';
 import '../../../core/providers.dart';
 import '../../../core/services/usage_limits.dart';
@@ -169,9 +171,16 @@ class NewCardContent extends ConsumerStatefulWidget {
 class _NewCardContentState extends ConsumerState<NewCardContent> {
   bool _busy = false;
 
-  /// Closes the sheet/page and opens [location].
+  /// Closes the sheet/page and opens [location]. Does nothing when the sheet
+  /// was dismissed in the meantime: popping then would remove the page that
+  /// is underneath (for example the notebook).
   void _finish(NavigatorState nav, GoRouter router, String location) {
-    nav.pop();
+    if (!mounted) {
+      return;
+    }
+    if (ModalRoute.of(context)?.isCurrent ?? true) {
+      nav.pop();
+    }
     unawaited(router.push<void>(location));
   }
 
@@ -259,6 +268,10 @@ class _NewCardContentState extends ConsumerState<NewCardContent> {
     final NavigatorState nav = Navigator.of(context);
     final GoRouter router = GoRouter.of(context);
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    // Read before the first await: the sheet may be gone by the time the
+    // photo has been picked.
+    final NotesRepository repository = ref.read(notesRepositoryProvider);
+    final AttachmentStore attachmentStore = ref.read(attachmentStoreProvider);
     final ImageSource? source =
         kIsWeb ? ImageSource.gallery : await _chooseSource();
     if (source == null || !mounted) {
@@ -279,14 +292,14 @@ class _NewCardContentState extends ConsumerState<NewCardContent> {
       }
       final Uint8List bytes = await file.readAsBytes();
       final String attachmentId = Uuid().v4();
-      await ref.read(attachmentStoreProvider).save(attachmentId, bytes);
+      await attachmentStore.save(attachmentId, bytes);
       final Attachment attachment = Attachment(
         id: attachmentId,
         kind: AttachmentKind.image,
         fileName: file.name.isEmpty ? 'photo.jpg' : file.name,
         byteLength: bytes.length,
       );
-      final NoteCard card = await ref.read(notesRepositoryProvider).createCard(
+      final NoteCard card = await repository.createCard(
             notebookId: widget.notebookId,
             type: CardType.photo,
             colorIndex: 1,
