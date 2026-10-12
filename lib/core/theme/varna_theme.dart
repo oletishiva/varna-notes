@@ -61,7 +61,8 @@ class VarnaTheme {
 
     TextStyle body(double size, {FontWeight weight = FontWeight.w400}) =>
         TextStyle(
-              fontFamilyFallback: VarnaFonts.fallback,
+          fontFamily: VarnaFonts.body,
+          fontFamilyFallback: VarnaFonts.fallback,
           fontWeight: weight,
           fontSize: size,
           height: 1.4,
@@ -92,6 +93,8 @@ class VarnaTheme {
 
     return ThemeData(
       useMaterial3: true,
+      fontFamily: VarnaFonts.body,
+      fontFamilyFallback: VarnaFonts.fallback,
       colorScheme: scheme,
       scaffoldBackgroundColor: c.ground,
       canvasColor: c.ground,
