@@ -50,3 +50,15 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Fonts are bundled; never downloaded at runtime. All three are SIL OFL.
+  fonts:
+    - family: Figtree
+      fonts:
+        - asset: assets/fonts/Figtree.ttf
+    - family: Bricolage Grotesque
+      fonts:
+        - asset: assets/fonts/BricolageGrotesque.ttf
+    - family: Noto Sans Telugu
+      fonts:
+        - asset: assets/fonts/NotoSansTelugu.ttf
