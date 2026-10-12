@@ -58,25 +58,27 @@ jobs:
       # logs are also pushed to a plain branch that can be read through git.
       - name: Publish logs to ci-logs branch
         if: always() && github.event_name == 'push'
+        continue-on-error: true
         run: |
-          mkdir -p /tmp/ci
+          mkdir -p /tmp/pub
           {
             echo "commit: ${GITHUB_SHA}"
-            echo "pub_get: ${{ job.status }}"
             echo "analyze: ${{ steps.analyze.outcome }}"
             echo "test: ${{ steps.test.outcome }}"
             echo "build_web: ${{ steps.web.outcome }}"
-          } > /tmp/ci/RESULT.txt
+          } > /tmp/pub/RESULT.txt
           for f in pub_get analyze test build_web; do
-            [ -f $f.log ] && tail -n 400 $f.log | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' > /tmp/ci/$f.log
+            if [ -f "$f.log" ]; then
+              tail -n 500 "$f.log" | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' > "/tmp/pub/$f.log"
+            fi
           done
+          cd /tmp/pub
+          git init -q -b ci-logs
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout --orphan ci-logs
-          git rm -rf . > /dev/null 2>&1 || true
-          cp /tmp/ci/* .
           git add -A
-          git commit -m "CI logs for ${GITHUB_SHA}"
+          git commit -q -m "CI logs for ${GITHUB_SHA}"
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
           git push -f origin ci-logs
 
       - name: Fail if anything failed
