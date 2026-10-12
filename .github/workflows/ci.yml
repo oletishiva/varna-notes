@@ -59,6 +59,19 @@ jobs:
         continue-on-error: true
         run: flutter build apk --debug 2>&1 | tee build_apk.log
 
+      - name: Publish debug APK as a release
+        if: steps.apk.outcome == 'success' && github.event_name == 'push'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp build/app/outputs/flutter-apk/app-debug.apk varna-debug.apk
+          gh release delete latest-debug --yes --cleanup-tag 2>/dev/null || true
+          gh release create latest-debug varna-debug.apk \
+            --title "Varna debug build (${GITHUB_SHA::7})" \
+            --notes "Debug APK built by CI from commit ${GITHUB_SHA}. For testing only; not signed for any store." \
+            --prerelease --target "${GITHUB_SHA}"
+
       # The authoring environment cannot download Actions artifacts, so the
       # logs are also pushed to a plain branch that can be read through git.
       - name: Publish logs to ci-logs branch
