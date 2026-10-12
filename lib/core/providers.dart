@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sembast/sembast.dart';
 
@@ -113,6 +115,32 @@ final usageLimitsProvider = Provider<UsageLimits>(
 final cloudStoreFactoryProvider =
     Provider<CloudStoreFactory>((ref) => defaultCloudStoreFactory);
 
+/// True when it is fine to sync while the "Wi-Fi only" setting is on.
+///
+/// Returns false only when the device is on mobile data without Wi-Fi or
+/// ethernet. On web (cannot tell) and when the probe itself fails, it returns
+/// true. Override in tests.
+Future<bool> defaultIsOnWifi() async {
+  if (kIsWeb) {
+    return true;
+  }
+  try {
+    final List<ConnectivityResult> results =
+        await Connectivity().checkConnectivity();
+    if (results.contains(ConnectivityResult.wifi) ||
+        results.contains(ConnectivityResult.ethernet)) {
+      return true;
+    }
+    return !results.contains(ConnectivityResult.mobile);
+  } catch (_) {
+    return true;
+  }
+}
+
+/// The probe handed to [SyncController.isOnWifi].
+final isOnWifiProvider =
+    Provider<Future<bool> Function()>((ref) => defaultIsOnWifi);
+
 /// The sync controller. Creating it also calls `init()` (restores the saved
 /// connection).
 final syncControllerProvider =
@@ -123,6 +151,7 @@ final syncControllerProvider =
     settings: ref.watch(settingsRepositoryProvider),
     storeFactory: ref.watch(cloudStoreFactoryProvider),
     clock: ref.watch(clockProvider),
+    isOnWifi: ref.watch(isOnWifiProvider),
   );
   ref.onDispose(controller.dispose);
   unawaited(controller.init().catchError((Object _) {}));

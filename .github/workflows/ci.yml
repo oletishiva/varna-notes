@@ -54,6 +54,11 @@ jobs:
         continue-on-error: true
         run: flutter build web 2>&1 | tee build_web.log
 
+      - name: Build Android debug APK
+        id: apk
+        continue-on-error: true
+        run: flutter build apk --debug 2>&1 | tee build_apk.log
+
       # The authoring environment cannot download Actions artifacts, so the
       # logs are also pushed to a plain branch that can be read through git.
       - name: Publish logs to ci-logs branch
@@ -66,8 +71,9 @@ jobs:
             echo "analyze: ${{ steps.analyze.outcome }}"
             echo "test: ${{ steps.test.outcome }}"
             echo "build_web: ${{ steps.web.outcome }}"
+            echo "build_apk: ${{ steps.apk.outcome }}"
           } > /tmp/pub/RESULT.txt
-          for f in pub_get analyze test build_web; do
+          for f in pub_get analyze test build_web build_apk; do
             if [ -f "$f.log" ]; then
               tail -n 500 "$f.log" | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' > "/tmp/pub/$f.log"
             fi
@@ -86,4 +92,5 @@ jobs:
         run: |
           test "${{ steps.analyze.outcome }}" = "success" && \
           test "${{ steps.test.outcome }}" = "success" && \
-          test "${{ steps.web.outcome }}" = "success"
+          test "${{ steps.web.outcome }}" = "success" && \
+          test "${{ steps.apk.outcome }}" = "success"

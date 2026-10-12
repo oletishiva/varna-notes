@@ -43,6 +43,9 @@ dependencies:
   local_auth: ^3.0.2
   url_launcher: ^6.3.3
 
+  # Wi-Fi-only sync enforcement
+  connectivity_plus: ^7.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

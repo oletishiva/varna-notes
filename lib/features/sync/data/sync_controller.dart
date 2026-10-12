@@ -60,8 +60,8 @@ class SyncController {
   /// disables automatic syncing.
   final Duration? autoSyncDelay;
 
-  /// Optional probe used to honour the "Wi-Fi only" setting. Without it the
-  /// setting is stored but cannot be enforced (v1 has no connectivity plugin).
+  /// Optional probe used to honour the "Wi-Fi only" setting (wired in
+  /// `syncControllerProvider`). Without it the setting cannot be enforced.
   final Future<bool> Function()? isOnWifi;
 
   SyncEngine? _engine;
