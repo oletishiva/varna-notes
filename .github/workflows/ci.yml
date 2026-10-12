@@ -13,6 +13,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,48 +29,59 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Flutter version
-        run: flutter --version
-
-      # Platform folders are generated once by Flutter and then committed back,
-      # because the authoring environment could not run Flutter itself.
       - name: Generate platform folders if missing
-        id: scaffold
         run: |
           if [ ! -d android ] || [ ! -d ios ] || [ ! -d web ]; then
             flutter create --platforms=android,ios,web --org com.qavedik --project-name varna .
-            echo "created=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Get packages
-        run: flutter pub get
+        run: flutter pub get 2>&1 | tee pub_get.log
 
+      # Each step records its real exit code so one failure does not hide the others.
       - name: Analyze
+        id: analyze
+        continue-on-error: true
         run: flutter analyze 2>&1 | tee analyze.log
 
       - name: Test
-        if: always()
+        id: test
+        continue-on-error: true
         run: flutter test 2>&1 | tee test.log
 
       - name: Build web
-        if: always()
+        id: web
+        continue-on-error: true
         run: flutter build web 2>&1 | tee build_web.log
 
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: logs
-          path: |
-            analyze.log
-            test.log
-            build_web.log
-
-      - name: Commit generated platform folders
-        if: always() && steps.scaffold.outputs.created == 'true' && github.event_name == 'push'
+      # The authoring environment cannot download Actions artifacts, so the
+      # logs are also pushed to a plain branch that can be read through git.
+      - name: Publish logs to ci-logs branch
+        if: always() && github.event_name == 'push'
         run: |
+          mkdir -p /tmp/ci
+          {
+            echo "commit: ${GITHUB_SHA}"
+            echo "pub_get: ${{ job.status }}"
+            echo "analyze: ${{ steps.analyze.outcome }}"
+            echo "test: ${{ steps.test.outcome }}"
+            echo "build_web: ${{ steps.web.outcome }}"
+          } > /tmp/ci/RESULT.txt
+          for f in pub_get analyze test build_web; do
+            [ -f $f.log ] && tail -n 400 $f.log | sed 's/\x1b\[[0-9;]*[A-Za-z]//g' > /tmp/ci/$f.log
+          done
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add android ios web pubspec.lock .metadata || true
-          git commit -m "Add Flutter-generated platform folders [skip ci]" || exit 0
-          git push
+          git checkout --orphan ci-logs
+          git rm -rf . > /dev/null 2>&1 || true
+          cp /tmp/ci/* .
+          git add -A
+          git commit -m "CI logs for ${GITHUB_SHA}"
+          git push -f origin ci-logs
+
+      - name: Fail if anything failed
+        if: always()
+        run: |
+          test "${{ steps.analyze.outcome }}" = "success" && \
+          test "${{ steps.test.outcome }}" = "success" && \
+          test "${{ steps.web.outcome }}" = "success"
