@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      # Platform folders are generated once by Flutter and then committed back,
+      # because the authoring environment could not run Flutter itself.
+      - name: Generate platform folders if missing
+        id: scaffold
+        run: |
+          if [ ! -d android ] || [ ! -d ios ] || [ ! -d web ]; then
+            flutter create --platforms=android,ios,web --org com.qavedik --project-name varna .
+            echo "created=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze 2>&1 | tee analyze.log
+
+      - name: Test
+        if: always()
+        run: flutter test 2>&1 | tee test.log
+
+      - name: Build web
+        if: always()
+        run: flutter build web 2>&1 | tee build_web.log
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs
+          path: |
+            analyze.log
+            test.log
+            build_web.log
+
+      - name: Commit generated platform folders
+        if: always() && steps.scaffold.outputs.created == 'true' && github.event_name == 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add android ios web pubspec.lock .metadata || true
+          git commit -m "Add Flutter-generated platform folders [skip ci]" || exit 0
+          git push
