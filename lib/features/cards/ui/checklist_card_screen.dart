@@ -157,10 +157,7 @@ class _ChecklistEditorState extends ConsumerState<_ChecklistEditor> {
         _items.where((ChecklistItem i) => !i.done).toList();
     final List<ChecklistItem> done =
         _items.where((ChecklistItem i) => i.done).toList();
-    int target = newIndex;
-    if (target > oldIndex) {
-      target -= 1;
-    }
+    final int target = newIndex;
     if (oldIndex < 0 || oldIndex >= open.length) {
       return;
     }
@@ -412,7 +409,7 @@ class _ChecklistEditorState extends ConsumerState<_ChecklistEditor> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           buildDefaultDragHandles: false,
-          onReorder: _reorder,
+          onReorderItem: _reorder,
           children: <Widget>[
             for (int i = 0; i < open.length; i++)
               _itemRow(

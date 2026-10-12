@@ -174,7 +174,7 @@ class SyncEngine {
     try {
       if (!await _store.isAvailable()) {
         _emit(const SyncOffline());
-        return _report(c, offline: true);
+        return await _report(c, offline: true);
       }
 
       List<RemoteFile> files = const <RemoteFile>[];
@@ -182,11 +182,11 @@ class SyncEngine {
         files = await _store.listFiles();
       } on CloudOfflineException {
         _emit(const SyncOffline());
-        return _report(c, offline: true);
+        return await _report(c, offline: true);
       } catch (e) {
         c.errors.add(SyncFileError('(list)', _describe(e)));
         _emit(SyncError(_describe(e)));
-        return _report(c, aborted: true);
+        return await _report(c, aborted: true);
       }
       final Map<String, RemoteFile> remoteByName = <String, RemoteFile>{
         for (final RemoteFile f in files) f.name: f,
@@ -199,7 +199,7 @@ class SyncEngine {
         }
       } on CloudOfflineException {
         _emit(const SyncOffline());
-        return _report(c, offline: true);
+        return await _report(c, offline: true);
       }
 
       final SyncReport report = await _report(c);

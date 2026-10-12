@@ -76,7 +76,7 @@ void main() {
       await settle(tester);
 
       final NoteCard? stored =
-          await tester.runAsync(() => repo.getCard(card.id));
+          await tester.runAsync<NoteCard?>(() => repo.getCard(card.id));
       expect(stored, isNotNull);
       expect(
         stored!.items.firstWhere((ChecklistItem i) => i.id == 'a').done,

@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'package:sembast/sembast.dart';
 import 'package:uuid/uuid.dart';
 
+import '../models/model_utils.dart' show formatUtc;
+
 import '../clock.dart';
 import '../models/models.dart';
 import 'attachment_store.dart';

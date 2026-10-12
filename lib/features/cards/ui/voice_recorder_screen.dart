@@ -275,7 +275,7 @@ class _VoiceRecorderScreenState extends ConsumerState<VoiceRecorderScreen> {
       if (!mounted) {
         return;
       }
-      unawaited(context.pushReplacement('/card/${card.id}'));
+      context.pushReplacement('/card/${card.id}');
     } catch (_) {
       if (!mounted) {
         return;

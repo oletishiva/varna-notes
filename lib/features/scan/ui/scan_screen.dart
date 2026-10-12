@@ -338,7 +338,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     if (!mounted) {
       return;
     }
-    unawaited(context.pushReplacement('/card/${saved.card.id}'));
+    context.pushReplacement('/card/${saved.card.id}');
   }
 
   Future<void> _offerReminder(NoteCard card, DateTime found, String text) async {

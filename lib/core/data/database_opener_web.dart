@@ -1,4 +1,3 @@
-import 'package:sembast/sembast.dart';
 import 'package:sembast_web/sembast_web.dart';
 
 /// Opens the IndexedDB-backed database named `varna.db`.
