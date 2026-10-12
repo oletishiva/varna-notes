@@ -1,0 +1,193 @@
+
+::group::✅ Passing tests
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: notebooks create, get and list
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: notebooks are listed oldest first
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: notebooks update bumps updatedAt, keeps createdAt, and always increases
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: notebooks delete is soft, cascades to cards and blanks content
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: cards create, get, update and soft delete
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: cards deleting a card removes its attachment bytes
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: cards cards of a notebook are listed newest change first
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: cards favourites and upcoming renewals
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: watch streams watchNotebooks emits the current list, then changes
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: watch streams watchCards only reports the given notebook
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: watch streams watchCard reports updates and null after delete
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: watch streams changes fires for local writes only
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: dirty tracking a record is dirty until its sync state matches updatedAt
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: dirty tracking applyRemoteRecord does not bump updatedAt
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: dirty tracking touchRecord and duplicateRecord
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: search is case-insensitive and reports where it matched
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: search finds OCR text and transcripts
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: search title matches rank first and list every matching field
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: search type filter, empty query, no match and limit
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: search every word must be present
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: search long text is cut with ellipses around the match
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: search works for Telugu text
+✅ /home/runner/work/varna-notes/varna-notes/test/notes_repository_test.dart: search makeSnippet handles out-of-range indexes
+✅ /home/runner/work/varna-notes/varna-notes/test/settings_and_limits_test.dart: SettingsRepository defaults
+✅ /home/runner/work/varna-notes/varna-notes/test/settings_and_limits_test.dart: SettingsRepository values persist and can be cleared
+✅ /home/runner/work/varna-notes/varna-notes/test/settings_and_limits_test.dart: SettingsRepository watch emits the current settings and then changes
+✅ /home/runner/work/varna-notes/varna-notes/test/settings_and_limits_test.dart: usage counters count within a month
+✅ /home/runner/work/varna-notes/varna-notes/test/settings_and_limits_test.dart: usage counters reset when the month changes
+✅ /home/runner/work/varna-notes/varna-notes/test/settings_and_limits_test.dart: usage counters reset across a year boundary
+✅ /home/runner/work/varna-notes/varna-notes/test/settings_and_limits_test.dart: usage counters resetUsage zeroes both counters
+✅ /home/runner/work/varna-notes/varna-notes/test/settings_and_limits_test.dart: UsageLimits (free plan) notebooks: five are free, the sixth is refused
+✅ /home/runner/work/varna-notes/varna-notes/test/settings_and_limits_test.dart: UsageLimits (free plan) scans: ten per month, then blocked until next month
+✅ /home/runner/work/varna-notes/varna-notes/test/settings_and_limits_test.dart: UsageLimits (free plan) transcripts: five per month
+✅ /home/runner/work/varna-notes/varna-notes/test/settings_and_limits_test.dart: UsageLimits (free plan) Plus is unlimited
+✅ /home/runner/work/varna-notes/varna-notes/test/settings_and_limits_test.dart: Entitlements the debug toggle is stored in settings
+✅ /home/runner/work/varna-notes/varna-notes/test/settings_and_limits_test.dart: Entitlements FixedEntitlements cannot be toggled
+✅ /home/runner/work/varna-notes/varna-notes/test/providers_and_services_test.dart: providers with an in-memory database notebooks flow through the repository and the stream provider
+✅ /home/runner/work/varna-notes/varna-notes/test/providers_and_services_test.dart: providers with an in-memory database family providers are keyed by id
+✅ /home/runner/work/varna-notes/varna-notes/test/providers_and_services_test.dart: providers with an in-memory database search provider uses SearchQuery equality
+✅ /home/runner/work/varna-notes/varna-notes/test/providers_and_services_test.dart: providers with an in-memory database renewal items are labelled with the injected clock
+✅ /home/runner/work/varna-notes/varna-notes/test/providers_and_services_test.dart: providers with an in-memory database settings, entitlements and limits are wired together
+✅ /home/runner/work/varna-notes/varna-notes/test/providers_and_services_test.dart: providers with an in-memory database services default to safe implementations
+✅ /home/runner/work/varna-notes/varna-notes/test/providers_and_services_test.dart: providers with an in-memory database the sync controller starts disconnected
+✅ /home/runner/work/varna-notes/varna-notes/test/providers_and_services_test.dart: services NoopOcrService refuses to recognise
+✅ /home/runner/work/varna-notes/varna-notes/test/providers_and_services_test.dart: services NoopReminderService does nothing
+✅ /home/runner/work/varna-notes/varna-notes/test/providers_and_services_test.dart: services reminder ids are stable, positive and differ per card
+✅ /home/runner/work/varna-notes/varna-notes/test/providers_and_services_test.dart: services the unconfigured AI service never fakes results
+✅ /home/runner/work/varna-notes/varna-notes/test/providers_and_services_test.dart: AppConfig holds the agreed limits, prices and ids
+✅ /home/runner/work/varna-notes/varna-notes/test/providers_and_services_test.dart: theme card colours match the design tokens and wrap around
+✅ /home/runner/work/varna-notes/varna-notes/test/providers_and_services_test.dart: theme lerp and copyWith
+✅ /home/runner/work/varna-notes/varna-notes/test/providers_and_services_test.dart: theme ThemeData is Material 3 and carries the extension
+✅ /home/runner/work/varna-notes/varna-notes/test/card_editors_test.dart: ChecklistCardScreen shows the items and a checkbox flips in the repository
+✅ /home/runner/work/varna-notes/varna-notes/test/card_editors_test.dart: Markdown helpers toggleWrap wraps and unwraps the selection
+✅ /home/runner/work/varna-notes/varna-notes/test/card_editors_test.dart: Markdown helpers toggleWrap with a cursor inserts a marker pair around it
+✅ /home/runner/work/varna-notes/varna-notes/test/card_editors_test.dart: Markdown helpers togglePrefix adds and removes a bullet on the current line
+✅ /home/runner/work/varna-notes/varna-notes/test/card_editors_test.dart: Markdown helpers togglePrefix handles a selection over several lines
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: Notebook JSON round-trip keeps every field
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: Notebook writes UTC ISO-8601 times
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: Notebook fromJson applies defaults for missing optional fields
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: Notebook copyWith changes only the given fields
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: NoteCard JSON round-trip keeps every field
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: NoteCard expiry date is written as a plain calendar date
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: NoteCard JSON round-trip with all nullable fields empty
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: NoteCard copyWith keeps nullable fields unless null is passed
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: NoteCard equality compares lists by value
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: NoteCard doneCount counts completed items
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: NoteCard unknown card type falls back to text
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: Attachment and ChecklistItem Attachment round-trips
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: Attachment and ChecklistItem ChecklistItem round-trips
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: Sync models SyncState round-trips
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: Sync models SyncRecord file names
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: Sync models contentEquals ignores updatedAt but not content
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: Sync models two tombstones are always equal
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: Sync models SyncConflict round-trips and exposes typed views
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: Sync models canonicalJson ignores key order
+✅ /home/runner/work/varna-notes/varna-notes/test/models_test.dart: Sync models SyncProviderId parses names
+✅ /home/runner/work/varna-notes/varna-notes/test/card_saver_test.dart: clampPickerDate keeps a date that is inside the range
+✅ /home/runner/work/varna-notes/varna-notes/test/card_saver_test.dart: clampPickerDate moves a too early date up to the first date
+✅ /home/runner/work/varna-notes/varna-notes/test/card_saver_test.dart: clampPickerDate moves a too late date down to the last date
+✅ /home/runner/work/varna-notes/varna-notes/test/card_saver_test.dart: clampPickerDate accepts the edges of the range
+✅ /home/runner/work/varna-notes/varna-notes/test/card_saver_test.dart: Autosaver cancel drops pending edits, dispose then saves nothing
+✅ /home/runner/work/varna-notes/varna-notes/test/card_saver_test.dart: Autosaver without cancel, dispose still saves pending edits
+✅ /home/runner/work/varna-notes/varna-notes/test/card_saver_test.dart: CardSaver.deleteIfEmpty deletes an empty text card
+✅ /home/runner/work/varna-notes/varna-notes/test/card_saver_test.dart: CardSaver.deleteIfEmpty keeps a card that has a title
+✅ /home/runner/work/varna-notes/varna-notes/test/card_saver_test.dart: CardSaver.deleteIfEmpty an edit that is still queued is applied first
+✅ /home/runner/work/varna-notes/varna-notes/test/card_saver_test.dart: CardSaver.deleteIfEmpty checklists: empty is deleted, with items is kept
+✅ /home/runner/work/varna-notes/varna-notes/test/card_saver_test.dart: CardSaver.deleteIfEmpty a card with a reminder is not empty
+✅ /home/runner/work/varna-notes/varna-notes/test/card_saver_test.dart: CardSaver.deleteIfEmpty a card that is already gone is left alone
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: date formats (day-first for numbers) slashes
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: date formats (day-first for numbers) dashes
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: date formats (day-first for numbers) dots
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: date formats (day-first for numbers) two-digit year is 20xx
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: date formats (day-first for numbers) day, abbreviated month name, year
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: date formats (day-first for numbers) day with ordinal and full month name
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: date formats (day-first for numbers) hyphenated month name
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: date formats (day-first for numbers) month name first with comma
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: date formats (day-first for numbers) ISO year first
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: date formats (day-first for numbers) is case-insensitive
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: date formats (day-first for numbers) numbers are day-first, not month-first
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: date formats (day-first for numbers) a month-first US date with month 18 is rejected
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: date formats (day-first for numbers) impossible calendar dates are rejected
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: date formats (day-first for numbers) a leap day is accepted in a leap year
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: choosing among several dates the keyword date wins over an issue date
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: choosing among several dates policy period uses the end date
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: choosing among several dates "from ... to ..." uses the end date
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: choosing among several dates a keyword on the previous line still counts
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: choosing among several dates a keyword two lines above does not count
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: choosing among several dates equally strong keywords: the later date wins
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: choosing among several dates a strong keyword beats the weak word "due"
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: choosing among several dates the weak word "due" is enough on its own
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: choosing among several dates works inside noisy OCR text
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: returns null when not confident empty and blank text
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: returns null when not confident a date with no expiry keyword
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: returns null when not confident text without dates
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: returns null when not confident a keyword too far from the date
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: returns null when not confident implausible years are ignored
+✅ /home/runner/work/varna-notes/varna-notes/test/expiry_date_parser_test.dart: returns null when not confident another date between keyword and candidate blocks the link
+✅ /home/runner/work/varna-notes/varna-notes/test/renewals_logic_test.dart: daysUntil same day is 0
+✅ /home/runner/work/varna-notes/varna-notes/test/renewals_logic_test.dart: daysUntil 18 Oct is 6 days after 12 Oct
+✅ /home/runner/work/varna-notes/varna-notes/test/renewals_logic_test.dart: daysUntil past dates are negative
+✅ /home/runner/work/varna-notes/varna-notes/test/renewals_logic_test.dart: daysUntil counts across a month end
+✅ /home/runner/work/varna-notes/varna-notes/test/renewals_logic_test.dart: daysUntil counts across a leap day
+✅ /home/runner/work/varna-notes/varna-notes/test/renewals_logic_test.dart: daysUntil counts across daylight-saving changes (calendar days only)
+✅ /home/runner/work/varna-notes/varna-notes/test/renewals_logic_test.dart: labels and urgency dueLabel
+✅ /home/runner/work/varna-notes/varna-notes/test/renewals_logic_test.dart: labels and urgency urgencyFor
+✅ /home/runner/work/varna-notes/varna-notes/test/renewals_logic_test.dart: upcoming sorts soonest first, overdue first of all, skips unusable cards
+✅ /home/runner/work/varna-notes/varna-notes/test/renewals_logic_test.dart: upcoming withinDays and includeOverdue filter the list
+✅ /home/runner/work/varna-notes/varna-notes/test/renewals_logic_test.dart: upcoming same-day items are ordered by id so the list is stable
+✅ /home/runner/work/varna-notes/varna-notes/test/renewals_logic_test.dart: folders the folder list comes from AppConfig
+✅ /home/runner/work/varna-notes/varna-notes/test/renewals_logic_test.dart: folders normalizeFolder is case-insensitive and falls back to Other
+✅ /home/runner/work/varna-notes/varna-notes/test/renewals_logic_test.dart: folders groupByFolder keeps every folder, in order
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: only one side changed local only: new records are uploaded once
+✅ /home/runner/work/varna-notes/varna-notes/test/search_screen_test.dart: SearchScreen finds a card by a word in its body
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: only one side changed local edit after a sync is uploaded
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: only one side changed remote only: a fresh device downloads everything
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: only one side changed remote edit is downloaded and applied
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: only one side changed neither side changed: skipped without downloading
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: only one side changed files that are not records are ignored
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: both sides changed different content creates a conflict and overwrites nothing
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: both sides changed identical content on both sides is not a conflict
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: both sides changed a stored conflict follows further remote changes
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: both sides changed a conflict disappears when both sides converge
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: tombstones a delete on device A reaches device B
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: tombstones a delete on device B reaches device A
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: tombstones a tombstone for a record never seen locally is stored
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: tombstones delete on one side and edit on the other is a conflict
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: resolving conflicts keepLocal uploads the local version
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: resolving conflicts keepRemote replaces the local version
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: resolving conflicts keepBoth keeps the cloud version and saves the local one as a copy
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: resolving conflicts resolving an unknown id does nothing
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: keepBoth after delete-vs-edit keeps the edit as a copy
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: errors a failing file is collected, the rest still syncs
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: errors a failing download is collected
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: errors a corrupt remote file is reported, not thrown
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: errors a remote file whose id does not match its name is rejected
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: errors offline: reports it and changes nothing
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: errors signed out store counts as offline
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: errors listing failure aborts the run with an error status
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: provider switch pushes everything to the new store and makes it active
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: provider switch an unavailable new store changes nothing
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: provider switch a failing first sync rolls back to the old store and its state
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: provider switch differing records already in the new store become conflicts
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: attachments blobs are uploaded and downloaded when media is included
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: attachments blobs stay local when media is excluded
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: races and reconnecting a local edit made while the cloud copy downloads is kept
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: races and reconnecting no sync state and identical content is simply in sync
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: races and reconnecting no sync state and different content is still a conflict
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: status stream and concurrency emits syncing then synced
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_engine_test.dart: status stream and concurrency overlapping sync calls share one run
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_controller_test.dart: without a connection, syncNow reports it and nothing happens
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_controller_test.dart: connect pushes local data and remembers the provider
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_controller_test.dart: connect fails cleanly when sign-in is refused
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_controller_test.dart: connect while offline leaves no connection behind
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_controller_test.dart: disconnect signs out but keeps local notes
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_controller_test.dart: switching provider signs out of the old one
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_controller_test.dart: Wi-Fi only blocks syncing when the probe says no
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_controller_test.dart: local edits trigger an automatic sync after the delay
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_controller_test.dart: includeMedia from settings controls attachment sync
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_controller_test.dart: conflicts are listed and resolved through the controller
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_controller_test.dart: signed-out cloud a manual sync signs in again once and carries on
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_controller_test.dart: signed-out cloud a refused sign-in says so instead of showing offline
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_controller_test.dart: signed-out cloud automatic syncs never prompt for a sign-in
+✅ /home/runner/work/varna-notes/varna-notes/test/app_smoke_test.dart: Welcome screen shows the headline and Get started
+✅ /home/runner/work/varna-notes/varna-notes/test/app_smoke_test.dart: Status chip says Synced for a finished sync
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_controller_test.dart: edits during a sync exactly one follow-up sync runs after the current one
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_controller_test.dart: launch and resume init can run one silent sync after restoring the connection
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_controller_test.dart: launch and resume resume syncs at most once per minute
+✅ /home/runner/work/varna-notes/varna-notes/test/sync_controller_test.dart: launch and resume resume does nothing without a connection
+::endgroup::
+
+🎉 188 tests passed.
