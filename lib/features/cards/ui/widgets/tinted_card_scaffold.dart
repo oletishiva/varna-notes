@@ -194,7 +194,7 @@ class TintedCardScaffold extends StatelessWidget {
 ///
 /// A saved card says "Saved on this device" until the last successful sync
 /// (when a cloud is connected) is newer than the card; only then does it say
-/// "Saved to <cloud>".
+/// "Saved to" plus the cloud name.
 class SaveIndicator extends ConsumerWidget {
   const SaveIndicator({
     super.key,
