@@ -1,8 +1,8 @@
 name: iOS build check
 
+# Spend-aware (2026-11-01): GitHub free Actions minutes are shared by all private repos and ran out in October.
+# Runs by hand (Actions tab -> Run workflow (macOS minutes cost 10x)); the local gate is the normal check.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
